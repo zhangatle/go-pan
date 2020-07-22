@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"pan/meta"
+	"pan/util"
+	"time"
 )
 
 func UploadHandler(w http.ResponseWriter, r *http.Request)  {
@@ -24,17 +27,29 @@ func UploadHandler(w http.ResponseWriter, r *http.Request)  {
 			return
 		}
 		defer file.Close()
-		newFile, err := os.Create("/tmp/" + head.Filename)
+
+		fileMeta := meta.FileMeta{
+			FileName: head.Filename,
+			FileLocation: "/tmp/" + head.Filename,
+			UploadAt: time.Now().Format("2006-01-02 15:03:04"),
+		}
+
+		newFile, err := os.Create(fileMeta.FileLocation)
 		if err != nil {
 			fmt.Printf("Failed to create file, err:%s\n", err.Error())
 			return
 		}
 		defer newFile.Close()
-		_, err = io.Copy(newFile, file)
+		fileMeta.FileSize, err = io.Copy(newFile, file)
 		if err != nil {
 			fmt.Printf("Failed to save data to file, err:%s\n", err.Error())
 			return
 		}
+
+		newFile.Seek(0, 0)
+		fileMeta.FileSha1 = util.FileSha1(newFile)
+		meta.UpdateFileMeta(fileMeta)
+
 		http.Redirect(w, r, "/file/upload/success", http.StatusFound)
 	}
 }
