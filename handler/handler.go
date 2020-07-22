@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -16,9 +17,9 @@ func UploadHandler(w http.ResponseWriter, r *http.Request)  {
 		// 返回上传页面
 		data,err := ioutil.ReadFile("./static/view/index.html")
 		if err != nil {
-			io.WriteString(w, "internal server error")
+			_, _ = io.WriteString(w, "internal server error")
 		}
-		io.WriteString(w, string(data))
+		_, _ = io.WriteString(w, string(data))
 	} else if r.Method == "POST" {
 		// 接收文件上传流及存储到本地目录
 		file, head, err := r.FormFile("file")
@@ -46,7 +47,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request)  {
 			return
 		}
 
-		newFile.Seek(0, 0)
+		_, _ = newFile.Seek(0, 0)
 		fileMeta.FileSha1 = util.FileSha1(newFile)
 		meta.UpdateFileMeta(fileMeta)
 
@@ -55,5 +56,17 @@ func UploadHandler(w http.ResponseWriter, r *http.Request)  {
 }
 
 func UploadSuccessHandler(w http.ResponseWriter, r *http.Request)  {
-	io.WriteString(w, "upload success")
+	_, _ = io.WriteString(w, "upload success")
+}
+
+func GetFileMetaHandler(w http.ResponseWriter, r *http.Request)  {
+	_ = r.ParseForm()
+	fileHash := r.Form["file_hash"][0]
+	fMeta := meta.GetFileMeta(fileHash)
+	data,err := json.Marshal(fMeta)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write(data)
 }
